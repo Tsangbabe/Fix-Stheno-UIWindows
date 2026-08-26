@@ -1,0 +1,95 @@
+name: Build RootHide package
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: roothide-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-roothide:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify requested package metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -E '^Package:' control | cut -d' ' -f2-)" = "com.tsangbaby.fixsthenouiwindows"
+          test "$(grep -E '^Name:' control | cut -d' ' -f2-)" = "FixSthenoUIWindows"
+          test "$(grep -E '^Version:' control | cut -d' ' -f2-)" = "0.0.1"
+          test "$(grep -E '^Maintainer:' control | cut -d' ' -f2-)" = "Tsangbaby"
+          test "$(grep -E '^Description:' control | cut -d' ' -f2-)" = "Fix-Stheno-UIWindows"
+          test "$(grep -E '^THEOS_PACKAGE_SCHEME' Makefile | cut -d'=' -f2 | tr -d ' ')" = "roothide"
+          test "$(grep -c 'com.apple.springboard' FixSthenoUIWindows.plist)" = "1"
+          test "$(grep -c 'com.apple.UIKit' FixSthenoUIWindows.plist)" = "1"
+          test ! -e Package/DEBIAN/control
+
+      - name: Install package and signing tools
+        run: brew install ldid dpkg
+
+      - name: Install roothide Theos and SDK
+        shell: bash
+        env:
+          THEOS: ${{ runner.temp }}/roothide-theos
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --recursive https://github.com/roothide/theos.git "$THEOS"
+          "$THEOS/bin/install-sdk" latest
+          test -d "$THEOS/sdks"
+          find "$THEOS/sdks" -maxdepth 1 -type d -name '*.sdk' -print -quit | grep .
+
+      - name: Build RootHide deb
+        shell: bash
+        env:
+          THEOS: ${{ runner.temp }}/roothide-theos
+        run: |
+          set -euo pipefail
+          export PATH="$THEOS/bin:$PATH"
+          make clean package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
+          mkdir -p artifacts
+          shopt -s nullglob
+          packages=(packages/*.deb)
+          test "${#packages[@]}" -eq 1
+          cp "${packages[0]}" artifacts/FixSthenoUIWindows-roothide.deb
+          printf '%s\n' "$GITHUB_SHA" > artifacts/SOURCE_COMMIT.txt
+          shasum -a 256 artifacts/FixSthenoUIWindows-roothide.deb | awk '{print $1 "  FixSthenoUIWindows-roothide.deb"}' > artifacts/SHA256SUMS.txt
+
+      - name: Verify RootHide package artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s artifacts/FixSthenoUIWindows-roothide.deb
+          test "$(cat artifacts/SOURCE_COMMIT.txt)" = "$GITHUB_SHA"
+          shasum -a 256 -c artifacts/SHA256SUMS.txt
+          mkdir -p verify
+          dpkg-deb -e artifacts/FixSthenoUIWindows-roothide.deb verify/control
+          dpkg-deb -x artifacts/FixSthenoUIWindows-roothide.deb verify/root
+          test "$(grep -E '^Package:' verify/control | cut -d' ' -f2-)" = "com.tsangbaby.fixsthenouiwindows"
+          test "$(grep -E '^Version:' verify/control | cut -d' ' -f2-)" = "0.0.1"
+          test "$(grep -E '^Architecture:' verify/control | cut -d' ' -f2-)" = "iphoneos-arm64e"
+          test -f verify/root/Library/MobileSubstrate/DynamicLibraries/FixSthenoUIWindows.dylib
+          test -f verify/root/Library/MobileSubstrate/DynamicLibraries/FixSthenoUIWindows.plist
+          file verify/root/Library/MobileSubstrate/DynamicLibraries/FixSthenoUIWindows.dylib
+
+      - name: Upload RootHide package and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: FixSthenoUIWindows-roothide-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            artifacts/FixSthenoUIWindows-roothide.deb
+            artifacts/SOURCE_COMMIT.txt
+            artifacts/SHA256SUMS.txt
