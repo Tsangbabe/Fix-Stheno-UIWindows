@@ -164,7 +164,7 @@ static BOOL SXDWindowLooksLikeCard(UIWindow *window) {
     return windowArea > 0.0 && windowArea < screenArea * 0.95;
 }
 
-static NSUInteger SXDSlotForObject(NSMapTable **tableStorage,
+static NSUInteger SXDSlotForObject(NSMapTable * __strong *tableStorage,
                                    NSUInteger *nextSlotStorage,
                                    id object) {
     if (!object) {
