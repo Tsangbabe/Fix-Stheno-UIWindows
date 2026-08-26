@@ -81,7 +81,7 @@ jobs:
           set -euo pipefail
           test -s artifacts/FixSthenoUIWindows-roothide.deb
           test "$(cat artifacts/SOURCE_COMMIT.txt)" = "$GITHUB_SHA"
-          shasum -a 256 -c artifacts/SHA256SUMS.txt
+          (cd artifacts && shasum -a 256 -c SHA256SUMS.txt)
           mkdir -p verify
           dpkg-deb -e artifacts/FixSthenoUIWindows-roothide.deb verify/control
           dpkg-deb -x artifacts/FixSthenoUIWindows-roothide.deb verify/root
