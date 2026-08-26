@@ -29,13 +29,22 @@ jobs:
           set -euo pipefail
           test "$(grep -E '^Package:' control | cut -d' ' -f2-)" = "com.tsangbaby.fixsthenouiwindows"
           test "$(grep -E '^Name:' control | cut -d' ' -f2-)" = "FixSthenoUIWindows"
-          test "$(grep -E '^Version:' control | cut -d' ' -f2-)" = "0.0.3"
+          test "$(grep -E '^Version:' control | cut -d' ' -f2-)" = "0.0.4"
           test "$(grep -E '^Maintainer:' control | cut -d' ' -f2-)" = "Tsangbaby"
           test "$(grep -E '^Description:' control | cut -d' ' -f2-)" = "Fix-Stheno-UIWindows"
           test "$(grep -E 'THEOS_PACKAGE_SCHEME' Makefile | cut -d'=' -f2 | tr -d ' ')" = "roothide"
           test "$(grep -c 'com.apple.springboard' FixSthenoUIWindows.plist)" = "1"
-          test "$(grep -c 'com.apple.UIKit' FixSthenoUIWindows.plist)" = "1"
+          test "$(grep -c 'com.apple.UIKit' FixSthenoUIWindows.plist || true)" = "0"
+          test "$(grep -c 'SXDInstallArbiterHook' FixSthenoUIWindows.m)" -ge "1"
+          test "$(grep -c 'setWindowHostingPID:active:' FixSthenoUIWindows.m)" -ge "1"
+          test "$(grep -c 'SXDDeactivateHost' FixSthenoUIWindows.m)" -ge "1"
           test ! -e Package/DEBIAN/control
+
+      - name: Run functional candidate contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p 'test_*.py' -v
 
       - name: Install package and signing tools
         run: brew install ldid dpkg
@@ -86,7 +95,7 @@ jobs:
           dpkg-deb -e artifacts/FixSthenoUIWindows-roothide.deb verify/control
           dpkg-deb -x artifacts/FixSthenoUIWindows-roothide.deb verify/root
           test "$(grep -E '^Package:' verify/control/control | cut -d' ' -f2-)" = "com.tsangbaby.fixsthenouiwindows"
-          test "$(grep -E '^Version:' verify/control/control | cut -d' ' -f2-)" = "0.0.3"
+          test "$(grep -E '^Version:' verify/control/control | cut -d' ' -f2-)" = "0.0.4"
           test "$(grep -E '^Architecture:' verify/control/control | cut -d' ' -f2-)" = "iphoneos-arm64e"
           test -f verify/root/Library/MobileSubstrate/DynamicLibraries/FixSthenoUIWindows.dylib
           test -f verify/root/Library/MobileSubstrate/DynamicLibraries/FixSthenoUIWindows.plist

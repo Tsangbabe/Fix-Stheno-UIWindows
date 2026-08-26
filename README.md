@@ -1,22 +1,28 @@
 # FixSthenoUIWindows
 
-RootHide Theos package project for the Stheno / SquidExtender window investigation.
+RootHide Theos **SpringBoard-only verification candidate** for the Stheno /
+SquidExtender hosted-keyboard overlap on iOS 15.4.1.
 
-## Important status
+## Candidate status
 
-Version `0.0.3` contains the previously prepared **read-only runtime diagnostic
-probe**. It is not yet a device-validated UI behavior fix. The source deliberately
-observes window, Scene, clipping, host-view and touch-routing state without changing
-`windowLevel`, frames, bounds, Scene ownership, layer order, key-window state or hit
-results. A successful GitHub Actions build proves compilation and package structure;
-it does not prove that the Stheno menu is fixed on the iPhone.
+Version `0.0.4` is an unreviewed, device-verification candidate. It is not a
+production fix and has not been accepted on the iPhone yet.
+
+The candidate tests one narrow mechanism suggested by the runtime and exact
+iOS 15.4.1 dyld evidence: a balanced `KeyboardArbiter` host-PID transition on
+SpringBoard's own arbiter handle while a visible Stheno card and a keyboard
+proxy host coexist in the same foreground Scene.
+
+A successful build proves compilation and package structure only. The handset
+must still verify keyboard appearance, menu touch routing, close cleanup, App
+switch cleanup, lock cleanup, and ordinary portrait-app keyboard behavior.
 
 ## Package metadata
 
 ```text
 Name:        FixSthenoUIWindows
 Package:     com.tsangbaby.fixsthenouiwindows
-Version:     0.0.1
+Version:     0.0.4
 Maintainer:  Tsangbaby
 Description: Fix-Stheno-UIWindows
 Scheme:      RootHide
@@ -24,27 +30,49 @@ Scheme:      RootHide
 
 ## Injection boundary
 
-The filter is intentionally limited to:
+The filter contains only:
 
 - `com.apple.springboard`
-- `com.apple.UIKit`
 
-No ordinary third-party app is included in the filter.
+No UIKit process or ordinary third-party application is injected. The source
+does not modify `UIRemoteKeyboardWindow` geometry, window levels, z positions,
+clipping, key-window state, or hit testing.
 
-## Diagnostic output
+## Runtime gates
 
-When loaded on the target device, the probe writes bounded, privacy-safe files:
+The candidate fails closed unless all of the following are true:
 
-```text
-/var/mobile/Documents/SthenoSquidExtenderWindowDiagnostic-SpringBoard.plist
-/var/mobile/Documents/SthenoSquidExtenderWindowDiagnostic-UIKit.plist
-```
+- `_UIKeyboardArbiter_ForSpringBoard` and
+  `+launchAdvisorWithOmniscientDelegate:` exist with the expected ABI;
+- the normal SpringBoard arbiter launch returns an advisor;
+- `advisor.owner` and `owner.handlerForPID:` match the expected ABI;
+- the returned handle identifies the current SpringBoard process;
+- `setWindowHostingPID:active:` matches the expected ABI;
+- a visible Stheno card exists in a foreground Scene;
+- a visible `SGPanelWindow`/`LecardWindow` in that same Scene contains a
+  visible keyboard host view;
+- the Stheno Scene exposes a client process with a valid PID different from
+  SpringBoard.
 
-The files contain fixed phase names, class names, geometry and state flags only.
-They do not collect text, clipboard data, URLs, account identifiers, passwords,
-request identifiers or credentials.
+The remote PID is registered only after those gates pass. The exact saved
+handle/PID pair is deactivated when the card or proxy host disappears, and
+cleanup is restored for retry if the private call throws.
 
-## GitHub Actions build
+## Device acceptance
+
+Install the unique `0.0.4` package, then test only the following bounded matrix:
+
+1. Open Stheno and the SquidExtender keyboard menu; verify the menu is visible
+   and its controls receive touches.
+2. Close the menu and Stheno; verify no stale keyboard behavior remains.
+3. Switch to another App and back; verify ordinary portrait keyboard behavior.
+4. Lock/unlock once; verify the candidate does not leave a stale host state.
+
+This is a functional verification step, not a release or review gate. If the
+behavior is unchanged, retract this candidate and do not layer another fix on
+it without new runtime evidence.
+
+## Build
 
 The workflow is:
 
@@ -52,9 +80,9 @@ The workflow is:
 .github/workflows/build-roothide.yml
 ```
 
-It runs on GitHub-hosted `macos-14`, installs `roothide/theos` and its SDK, builds
-with `THEOS_PACKAGE_SCHEME=roothide`, checks the Debian metadata and package paths,
-and uploads:
+It runs on GitHub-hosted `macos-14`, installs `roothide/theos` and an iPhoneOS
+SDK, builds with `THEOS_PACKAGE_SCHEME=roothide`, checks the Debian metadata and
+SpringBoard-only filter, and uploads:
 
 ```text
 FixSthenoUIWindows-roothide.deb
@@ -62,20 +90,5 @@ SOURCE_COMMIT.txt
 SHA256SUMS.txt
 ```
 
-The source commit is recorded next to the artifact so the package can be tied to the
-exact GitHub Actions run. CI/package success remains separate from real-device
-acceptance.
-
-## Local project layout
-
-```text
-Makefile
-control
-FixSthenoUIWindows.m
-FixSthenoUIWindows.plist
-README.md
-.github/workflows/build-roothide.yml
-```
-
-The current Linux host does not have Apple Xcode, Apple SDKs or Theos; the intended
-build path is the GitHub-hosted macOS workflow.
+The current Linux host has no Apple Xcode, Apple SDK, or Theos; GitHub Actions
+is the build path.
