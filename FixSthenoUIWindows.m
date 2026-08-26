@@ -519,7 +519,12 @@ static void SXDRecordWindowEvent(NSString *phase, UIWindow *window, NSDictionary
         [fields addEntriesFromDictionary:extra];
     }
     SXDRecord(phase, fields);
-    SXDScheduleSnapshot(phase);
+    if (SXDDomain == SXDProcessDomainSpringBoard &&
+        (SXDIsKeyboardWindow(window) || SXDIsSthenoWindow(window))) {
+        SXDRecordSnapshotOnMain(phase, YES);
+    } else {
+        SXDScheduleSnapshot(phase);
+    }
 }
 
 static void SXDRecordTouchRoute(UIEvent *event) {
@@ -680,6 +685,14 @@ static BOOL SXDInstallCommonWindowHooks(void) {
     return initInstalled && levelInstalled && sceneInstalled;
 }
 
+static BOOL SXDInstallSpringBoardHooks(void) {
+    Class application = objc_getClass("UIApplication");
+    return SXDInstallHook(application,
+                          @selector(sendEvent:),
+                          (IMP)SXDHookSendEvent,
+                          (IMP *)&SXDOriginalSendEvent);
+}
+
 static BOOL SXDInstallUIKitHooks(void) {
     Class keyboardImpl = objc_getClass("UIKeyboardImpl");
     Class keyboardWindow = objc_getClass("UIRemoteKeyboardWindow");
@@ -753,7 +766,7 @@ static void SXDInitializeOnMain(NSUInteger attempt) {
     BOOL commonHooks = SXDInstallCommonWindowHooks();
     BOOL domainHooks = domain == SXDProcessDomainUIKit
         ? SXDInstallUIKitHooks()
-        : YES;
+        : SXDInstallSpringBoardHooks();
     SXDRecord(@"bootstrap", @{
         @"common_window_hooks_installed" : @(commonHooks),
         @"domain_hooks_installed" : @(domainHooks),

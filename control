@@ -1,6 +1,6 @@
 Package: com.tsangbaby.fixsthenouiwindows
 Name: FixSthenoUIWindows
-Version: 0.0.2
+Version: 0.0.3
 Architecture: iphoneos-arm64e
 Description: Fix-Stheno-UIWindows
 Maintainer: Tsangbaby
