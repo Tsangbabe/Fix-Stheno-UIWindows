@@ -558,8 +558,10 @@ static SXDProcessDomain SXDDetermineDomain(void) {
         return SXDProcessDomainSpringBoard;
     }
     if (NSClassFromString(@"UIRemoteKeyboardWindow") != Nil &&
-        NSClassFromString(@"UIKeyboardImpl") != Nil &&
-        SXDUIKitSthenoPresenceHint()) {
+        NSClassFromString(@"UIKeyboardImpl") != Nil) {
+        // The substrate filter already scopes this image to com.apple.UIKit.
+        // Do not require Stheno's preference file: RootHide path mapping or
+        // preference timing must not suppress the UIKit diagnostic itself.
         return SXDProcessDomainUIKit;
     }
     return SXDProcessDomainUnknown;

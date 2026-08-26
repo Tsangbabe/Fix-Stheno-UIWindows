@@ -4,7 +4,7 @@ RootHide Theos package project for the Stheno / SquidExtender window investigati
 
 ## Important status
 
-Version `0.0.1` contains the previously prepared **read-only runtime diagnostic
+Version `0.0.2` contains the previously prepared **read-only runtime diagnostic
 probe**. It is not yet a device-validated UI behavior fix. The source deliberately
 observes window, Scene, clipping, host-view and touch-routing state without changing
 `windowLevel`, frames, bounds, Scene ownership, layer order, key-window state or hit
