@@ -44,10 +44,18 @@ jobs:
         shell: bash
         env:
           THEOS: ${{ runner.temp }}/roothide-theos
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git clone --depth 1 --recursive https://github.com/roothide/theos.git "$THEOS"
-          "$THEOS/bin/install-sdk" latest
+          mkdir -p "$THEOS/sdks"
+          sdk_url="$(curl -fsSL \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            https://api.github.com/repos/theos/sdks/releases/latest \
+            | python3 -c 'import json, sys; assets=json.load(sys.stdin)["assets"]; items=[a for a in assets if a["name"].startswith("iPhoneOS") and a["name"].endswith(".sdk.tar.xz")]; key=lambda a: tuple(int(x) for x in a["name"][len("iPhoneOS"):].split(".sdk")[0].split(".")); print(max(items, key=key)["browser_download_url"])')"
+          test -n "$sdk_url"
+          curl -fsSL "$sdk_url" | tar -xJv -C "$THEOS/sdks"
           test -d "$THEOS/sdks"
           find "$THEOS/sdks" -maxdepth 1 -type d -name '*.sdk' -print -quit | grep .
 
