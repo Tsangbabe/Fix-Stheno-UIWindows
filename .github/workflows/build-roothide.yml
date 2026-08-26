@@ -85,9 +85,9 @@ jobs:
           mkdir -p verify
           dpkg-deb -e artifacts/FixSthenoUIWindows-roothide.deb verify/control
           dpkg-deb -x artifacts/FixSthenoUIWindows-roothide.deb verify/root
-          test "$(grep -E '^Package:' verify/control | cut -d' ' -f2-)" = "com.tsangbaby.fixsthenouiwindows"
-          test "$(grep -E '^Version:' verify/control | cut -d' ' -f2-)" = "0.0.1"
-          test "$(grep -E '^Architecture:' verify/control | cut -d' ' -f2-)" = "iphoneos-arm64e"
+          test "$(grep -E '^Package:' verify/control/control | cut -d' ' -f2-)" = "com.tsangbaby.fixsthenouiwindows"
+          test "$(grep -E '^Version:' verify/control/control | cut -d' ' -f2-)" = "0.0.1"
+          test "$(grep -E '^Architecture:' verify/control/control | cut -d' ' -f2-)" = "iphoneos-arm64e"
           test -f verify/root/Library/MobileSubstrate/DynamicLibraries/FixSthenoUIWindows.dylib
           test -f verify/root/Library/MobileSubstrate/DynamicLibraries/FixSthenoUIWindows.plist
           file verify/root/Library/MobileSubstrate/DynamicLibraries/FixSthenoUIWindows.dylib
