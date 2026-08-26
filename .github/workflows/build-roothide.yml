@@ -32,7 +32,7 @@ jobs:
           test "$(grep -E '^Version:' control | cut -d' ' -f2-)" = "0.0.1"
           test "$(grep -E '^Maintainer:' control | cut -d' ' -f2-)" = "Tsangbaby"
           test "$(grep -E '^Description:' control | cut -d' ' -f2-)" = "Fix-Stheno-UIWindows"
-          test "$(grep -E '^THEOS_PACKAGE_SCHEME' Makefile | cut -d'=' -f2 | tr -d ' ')" = "roothide"
+          test "$(grep -E 'THEOS_PACKAGE_SCHEME' Makefile | cut -d'=' -f2 | tr -d ' ')" = "roothide"
           test "$(grep -c 'com.apple.springboard' FixSthenoUIWindows.plist)" = "1"
           test "$(grep -c 'com.apple.UIKit' FixSthenoUIWindows.plist)" = "1"
           test ! -e Package/DEBIAN/control
